@@ -40,6 +40,7 @@ def create_app():
 
     #blueprint for api routes
     from .api import api as api_blueprint
+    csrf.exempt(api_blueprint)
     app.register_blueprint(api_blueprint)
 
     #blueprint for admin
