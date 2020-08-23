@@ -1,0 +1,15 @@
+<html>
+    <head>
+        <title>Python is awesome!</title>
+    </head>
+    <body>
+        <h3>List of received locations:</h3>
+        <ul>
+            {% for loc in locations %}
+                <li>
+                    {{ loc }}
+                </li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>

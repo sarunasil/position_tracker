@@ -1,0 +1,1 @@
+#do some init for first time launch e.g. database init
