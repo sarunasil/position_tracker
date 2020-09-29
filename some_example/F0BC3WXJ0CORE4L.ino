@@ -1,3 +1,4 @@
+/*
 #include "Adafruit_FONA.h"
 #include "LowPower.h"
 #include <SoftwareSerial.h>
@@ -84,4 +85,4 @@ void GetGPS() {
 void TimerReset() {
   timer = 0;
 }
-
+*/
