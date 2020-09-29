@@ -45,13 +45,18 @@ def api_get():
 
 @api.route('/api', methods=["POST"])
 def api_post():
-    data = json.dumps(request.get_json())
+    data = request.get_json()
+    # data = str(request.get_data())
 
     try:
-        with open('post_file.txt', 'a') as dfile:
-            dfile.write(data)
-            dfile.write('\n')
-        data = "OK. 0"
+        if data:
+            data = json.dumps(data)
+            with open('post_file.txt', 'a') as dfile:
+                dfile.write(data)
+                dfile.write('\n')
+            data = "OK. 0"
+        else:
+            data = "Err. No Data"
     except:
         data = "Err. 6"
 

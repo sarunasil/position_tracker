@@ -56,8 +56,8 @@ void loop() { // run over and over
         }
         else if (b == '#'){
             send_http("78.60.181.9", 11, 51000, 1, 
-"POST /api HTTP/1.1\nHost: 78.60.181.9:51000\nContent-Type: text/plain\n\nYYY\r\n\r\n"
-            , 86);
+"POST /api HTTP/1.1\r\nHost: 78.60.181.9:51000\r\nContent-Type: application/json\r\nContent-Length: 23\r\n\r\n{ \"lat\":\"X\", \"lon\":\"Y\"}"
+            , 122);
         }
         else{
             sim_board_SS.write(b);
