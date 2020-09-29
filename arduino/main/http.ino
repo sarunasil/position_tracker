@@ -1,103 +1,163 @@
 
+char get_chttps_state(){
 
-void send_http(char *hostname, int hostnameLen, unsigned int port, int http, char *request, int requestLen){
-
-    //check if net is open and only if it's not, open it
+    char value[3] = "-";
     sim_board_SS.print("AT+CHTTPSSTATE\r");
-    if (wait_response("OK", 2)){
+    if (wait_value_response("+CHTTPSSTATE: ", 14, value)){
+        Serial.print("get value:");
+        Serial.println(value[0]);
 
-        if (wait_response("+CHTTPSSTATE: 0", 15)){
+        wait_response("OK",2);
+        return value[0];
+    }
+    else{
+        //Error
+        return '-';
+    }
+}
 
-            //open net connection if not opened yet
-            sim_board_SS.print("AT+CHTTPSSTART\r");
-            Serial.println("AT+CHTTPSSTART\r");
-            if (!wait_response("OK", 2)){
-                Serial.println("STOPPED chttps start");
-                return;
-            }
+bool start_net(){
 
+    char state = get_chttps_state();
+    Serial.print("State is :");
+    Serial.println(state);
+    //check if net is open and only if it's not, open it
+    if (state == '0'){ //expected state is 0 - net closed
 
+        //open net connection if not opened yet
+        sim_board_SS.print("AT+CHTTPSSTART\r");
+        Serial.println("AT+CHTTPSSTART\r");
+        if (!wait_response("OK", 2)){
+            Serial.println("STOPPED chttps start");
+            return false;
+        }
+    }
+    else if (state == '4'){ //net opened
+        return true;
+    }
+    else{
+        return false;
+    }
+
+    return true;
+}
+
+bool start_session(char *hostname, int hostnameLen, unsigned int port, int http){
+
+    if (get_chttps_state() == '4'){
+        sim_board_SS.print("AT+CHTTPSOPSE=\"");
+        Serial.print("AT+CHTTPSOPSE=\"");
+        for (int i=0;i<hostnameLen;++i){
+            sim_board_SS.print(hostname[i]);
+            Serial.print(hostname[i]);
+        }
+        sim_board_SS.print("\"," + String(port) + "," + String(http) + "\r\n");
+        Serial.print("\"," + String(port) + "," + String(http) + "\r\n");
+        if (!wait_response("OK", 2)){
+            Serial.println("STOPPED 2");
+            return false;
+        }
+    }
+
+    if (get_chttps_state() != '7'){
+        Serial.println("state NOT 7 but "+ get_chttps_state());
+        return false;
+    }
+
+    return true;
+}
+
+bool send_request(char *request, int requestLen){
+
+    if (get_chttps_state() == '7'){
+        sim_board_SS.print("AT+CHTTPSSEND=" + String(requestLen+4) + "\r" );
+        Serial.println("AT+CHTTPSSEND=" + String(requestLen+4) + "\r" );
+        if (!wait_response(">", 1)){
+            Serial.println("STOPPED 2.5");
+            return;
+        }
+
+        for (int i=0;i<requestLen;++i){
+            sim_board_SS.print(request[i]);
+            Serial.print(request[i]);
+        }
+        sim_board_SS.print("\r\n\r\n");
+        Serial.print("\r\n\r\n");
+        if (!(
+                wait_response("OK", 2) &&
+                wait_response("+CHTTPS: RECV EVENT", 19) &&
+                wait_response("+CHTTPSNOTIFY: PEER CLOSED", 26)
+            )){
+            Serial.println("STOPPED 3");
+            return false;
         }
     }
     else{
-        Serial.println("STOPPED state check");
-        return;
+        Serial.println("couldn't send - state not 7");
+        return false;
     }
+    return true;
+}
 
-    sim_board_SS.print("AT+CHTTPSOPSE=\"");
-    Serial.print("AT+CHTTPSOPSE=\"");
-    for (int i=0;i<hostnameLen;++i){
-        sim_board_SS.print(hostname[i]);
-        Serial.print(hostname[i]);
-    }
-    sim_board_SS.print("\",");
-    Serial.print("\",");
-    sim_board_SS.print(port);
-    Serial.print(port);
-    sim_board_SS.print(",");
-    Serial.print(",");
-    if (http == 1){
-        sim_board_SS.print(1);
-        Serial.println(1);
-    }
-    else if (http == 2){
-        sim_board_SS.print(2);
+int get_response_len(){
+    int value_size=5;
+    char value[value_size] = "---";
+
+    sim_board_SS.print("AT+CHTTPSRECV?\r");
+    if (wait_value_response("+CHTTPSRECV: LEN,", 17, value)){
+        int response_len = atoi(value);
+
+        wait_response("OK",2);
+        return response_len;
     }
     else{
-        Serial.println("Not expected 'http' value..");
-        sim_board_SS.print(0);
+        //Error
+        return -1;
     }
-    sim_board_SS.print("\r\n");
-    if (!wait_response("OK", 2)){
-        Serial.println("STOPPED 2");
+}
+
+int send_http(char *hostname, int hostnameLen, unsigned int port, int http, char *request, int requestLen){
+
+    if (!start_net()){
+        Serial.println("net fail");
         return;
     }
+    Serial.println("net done");
 
-    sim_board_SS.print("AT+CHTTPSSEND=");
-    Serial.print("AT+CHTTPSSEND=");
-    sim_board_SS.print(requestLen+4);
-    Serial.print(requestLen+4);
-    sim_board_SS.print("\r");
-    Serial.println("\r");
-    if (!wait_response(">", 1)){
-        Serial.println("STOPPED 2.5");
+    if (!start_session(hostname, hostnameLen, port, http)){
+        Serial.println("session fail");
         return;
     }
+    Serial.println("session done");
 
-    for (int i=0;i<requestLen;++i){
-        sim_board_SS.print(request[i]);
-        Serial.print(request[i]);
-    }
-    sim_board_SS.print("\r\n\r\n");
-    Serial.print("\r\n\r\n");
-    if (!(
-             wait_response("OK", 2) &&
-             wait_response("+CHTTPS: RECV EVENT", 19) &&
-             wait_response("+CHTTPSNOTIFY: PEER CLOSED", 26)
-        )){
-        Serial.println("STOPPED 3");
+    if (!send_request(request, requestLen)){
+        Serial.println("request fail");
         return;
     }
+    Serial.println("request done");
 
-//   sim_board_SS.print("AT+CHTTPSSTATE\r");
-//   delay(500);
-//   if (!wait_response("+CHTTPSSTATE: 7", 15)){
-//     Serial.println("STOPPED 4");
-//     return;
-//   }
+    int len = get_response_len();
+    Serial.print("Received response len is ");
+    Serial.println(len);
 
-    sim_board_SS.print("AT+CHTTPSRECV?");
-//   if (!wait_response("+CHTTPSSTATE: 0", 15)){
-//     Serial.println("STOPPED 5");
-//     return;
-//   }
+    char data[ len ]; // Just be careful and keep received resp len low
+                      // as the whole thing is saved in memeory at once...
+    read_response(data, len);
 
-//   sim_board_SS.print("AT+CHTTPSCLSE\r");
+    int start = get_resp_cont_start_index(data, len);
+    if ( start < 0 ){
+        Serial.println("Could not find content separator");
+        start = 0;
+        // return;
+    }
+    for (int i=start;i<len;++i){
+        Serial.print(data[i]);
+    }
+
 
 //   sim_board_SS.print("AT+CHTTPSSTOP\r");
-//   delay(2000);
-//   Serial.println("done");
-
+    Serial.println("<done>");
+    return 0;
 }
 
 /*
