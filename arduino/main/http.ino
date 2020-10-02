@@ -3,11 +3,11 @@ char get_chttps_state(){
 
     char value[3] = "-";
     sim_board_SS.print(F("AT+CHTTPSSTATE\r"));
-    if (wait_value_response("+CHTTPSSTATE: ", 14, value)){
+    if (wait_value_response("+CHTTPSSTATE: ", value)){
         Serial.print(F("chttps state:"));
         Serial.println(value[0]);
 
-        wait_response("OK",2);
+        wait_response("OK");
         return value[0];
     }
     else{
@@ -25,7 +25,7 @@ bool start_net(){
         //open net connection if not opened yet
         sim_board_SS.print(F("AT+CHTTPSSTART\r"));
         Serial.println(F("AT+CHTTPSSTART\r"));
-        if (!wait_response("OK", 2)){
+        if (!wait_response("OK")){
             Serial.println(F("STOPPED chttps start"));
             return false;
         }
@@ -61,7 +61,7 @@ bool start_session(const char *hostname, unsigned int port, int http){
         Serial.print(F(","));
         Serial.print(http);
         Serial.print(F("\r\n"));
-        if (!wait_response("OK", 2)){
+        if (!wait_response("OK")){
             Serial.println(F("STOPPED 2"));
             return false;
         }
@@ -87,7 +87,7 @@ bool send_request(const char *request, int requestLen){
         Serial.print(requestLen+4);
         Serial.println(F("\r"));
 
-        if (!wait_response(">", 1)){
+        if (!wait_response(">")){
             Serial.println(F("STOPPED 2.5"));
             return;
         }
@@ -98,9 +98,9 @@ bool send_request(const char *request, int requestLen){
         Serial.print(request);
         Serial.print(F("\r\n\r\n"));
         if (!(
-                wait_response("OK", 2) &&
-                wait_response("+CHTTPS: RECV EVENT", 19) &&
-                wait_response("+CHTTPSNOTIFY: PEER CLOSED", 26)
+                wait_response("OK") &&
+                wait_response("+CHTTPS: RECV EVENT") &&
+                wait_response("+CHTTPSNOTIFY: PEER CLOSED")
             )){
             Serial.println(F("STOPPED 3"));
             return false;
@@ -119,10 +119,10 @@ int get_response_len(){
 
     sim_board_SS.print(F("AT+CHTTPSRECV?\r"));
     Serial.println(F("AT+CHTTPSRECV?\r"));
-    if (wait_value_response("+CHTTPSRECV: LEN,", 17, value)){
+    if (wait_value_response("+CHTTPSRECV: LEN,", value)){
         int response_len = atoi(value);
 
-        wait_response("OK",2);
+        wait_response("OK");
         return response_len;
     }
     else{
@@ -163,40 +163,38 @@ int send_http_request(const char *hostname, unsigned int port, int http, const c
     Serial.println(len);
 
     const int max_recv_buff_len = 400;
-    int recv_buff_len = len+1;
+    int recv_buff_len = len+1; //+1 is for \0 at the end
     if (len > max_recv_buff_len){
+        Serial.print("Will have to cut response to ");
+        Serial.println(max_recv_buff_len);
         recv_buff_len = max_recv_buff_len;
     }
 
     char data[ recv_buff_len ]; // Just be careful and keep received resp len low
                     // as the whole thing is saved in memeory at once...
-    read_response(data, recv_buff_len);
+    bool read_res = read_response(data, recv_buff_len-1); // -1 to leave space for '\0'
+    if ( !read_res ){
+        Serial.println(F("READING INTERRUPTED BY UNEXPECTED ERROR")); //try again?
+    }
 
-
-    // int start = get_resp_cont_start_index(data, recv_buff_len);
+    int start = get_resp_cont_start_index(data, recv_buff_len);
     // Serial.print("start=");
     // Serial.println(start);
-    // if ( start < 0 ){
-    //     Serial.println(F("Could not find content separator"));
-    //     start = 0;
-    //     // return;
-    // }
-    // Serial.println("Bef print data");
-    // for (int i=start;i<recv_buff_len;++i){
-    //     Serial.print(i);
-    //     Serial.print(" -> ");
-    //     Serial.write(data[i]);
-    //     Serial.println();
-    // }
-    Serial.println("DATA:");
-    Serial.print(data);
-    Serial.println("DATA_END:");
+    if ( start < 0 ){
+        Serial.println(F("Could not find content separator"));
+        start = 0;
+        // return;
+    }
+    for (int i=start;i<recv_buff_len;++i){
+        // Serial.print(i);
+        // Serial.print(" -> ");
+        // Serial.write(data[i]);
+        // Serial.println();
+        Serial.print(data[i]);
+    }
 
 //   sim_board_SS.print("AT+CHTTPSSTOP\r");
-    Serial.println("<done>");
-
-    Serial.print("Free ram:");
-    Serial.println(freeRam());
+    Serial.println(F("<done>"));
     return 0;
 }
 

@@ -1,7 +1,7 @@
 
 int msg_separator_symbol(char c){
-    const char first_char = '\r';
-    const char second_char = '\n';
+    const static char first_char = '\r';
+    const static char second_char = '\n';
 
     if (c == first_char){
         delay(1);
@@ -21,18 +21,25 @@ int msg_separator_symbol(char c){
 }
 
 
-bool wait_response(const char *expectedResponse, int responseLen){
+bool wait_response(const char *expectedResponse){
+    // Serial.print("Wainting for ");
+    // Serial.println(expectedResponse);
+    byte responseLen = strlen(expectedResponse);
     while ( !sim_board_SS.available() );
+    // Serial.print("Buffer queue: ");
+    // Serial.println(sim_board_SS.available());
 
     int i=0;
     while (sim_board_SS.available()){
         delay(1);
+        // Serial.print("\navailable:");
+        // Serial.print(sim_board_SS.available());
         char c = sim_board_SS.read();
         // Serial.print(i);
         // Serial.print("-> ");
         // Serial.print((int)c);
         // Serial.print(" ");
-        // Serial.println(c);
+        // Serial.print(c);
 
         int msg_sep_status = msg_separator_symbol(c);
         if (msg_sep_status > 0){
@@ -80,7 +87,10 @@ bool wait_response(const char *expectedResponse, int responseLen){
     return true;
 }
 
-bool wait_value_response(const char* expectedHeader, int expectedHeaderLen, char *returnValue){
+bool wait_value_response(const char* expectedHeader, char *returnValue){
+    // Serial.print("Wainting for header ");
+    // Serial.println(expectedHeader);
+    byte expectedHeaderLen = strlen(expectedHeader);
     while ( !sim_board_SS.available() );
 
     int i=0;
@@ -92,7 +102,7 @@ bool wait_value_response(const char* expectedHeader, int expectedHeaderLen, char
         // Serial.print("-> ");
         // Serial.print((int)c);
         // Serial.print(" ");
-        // Serial.println(c);
+        // Serial.print(c);
 
         int msg_sep_status = msg_separator_symbol(c);
         if (msg_sep_status > 0){
@@ -129,56 +139,80 @@ bool wait_value_response(const char* expectedHeader, int expectedHeaderLen, char
     return true;
 }
 
-void read_response(char *data, int response_size){
-    // const static byte = 32;
+bool read_response(char *data, int response_size){
+    const static byte read_len = 64;
 
-    sim_board_SS.print(F("AT+CHTTPSRECV="));
-    sim_board_SS.print(response_size);
-    sim_board_SS.print(F("\r"));
+    int i = 0;
+    for ( int read_acc=0; read_acc < response_size; read_acc += read_len ){
 
-    Serial.print(F("AT+CHTTPSRECV="));
-    Serial.print(response_size);
-    Serial.println(F("\r"));
+        sim_board_SS.print(F("AT+CHTTPSRECV="));
+        sim_board_SS.print(read_len);
+        sim_board_SS.print(F("\r"));
 
-    if (wait_response("OK", 2)){
-        char vali[5] = "---";//actually not used but just there for the param
-        wait_value_response("+CHTTPSRECV: DATA,",18,vali);
+        // Serial.print(F("AT+CHTTPSRECV="));
+        // Serial.print(read_len);
+        // Serial.println(F("\r"));
 
-        Serial.print("In buffer:");
-        Serial.println(sim_board_SS.available());
-        Serial.println("---------------");
-        int i = 0;
-        byte c;
-        Serial.println("before while");
-        while (i < response_size ){
-            while ( !sim_board_SS.available() ){
-                Serial.write(0x40);
+        if (wait_response("OK")){
+            char vali[5] = "---";//actually not used but just there for the param
+            wait_value_response("+CHTTPSRECV: DATA,",vali);
+
+            // Serial.println(F("---------------"));
+            static char c;
+            while (i < read_acc + atoi(vali)){
+                if ( i >= response_size ){ //request too large - truncate the rest
+                    data[i] = '\0';
+                    while (sim_board_SS.available()){
+                        sim_board_SS.read(); //clear anything that's left (if any)
+                        delay(5);
+                    }
+                    sim_board_SS.print(F("AT+CHTTPSRECV="));//get anything that's still
+                                                    //not sent
+                    sim_board_SS.print(response_size);
+                    sim_board_SS.print(F("\r"));
+                    wait_response("OK");
+                    wait_value_response("+CHTTPSRECV: DATA,",vali);
+                    while (sim_board_SS.available()){
+                        sim_board_SS.read(); //clear anything that's left (if any)
+                        delay(5);
+                    }
+                    // Serial.println(i);
+                    return true; // response too large
+                }
+                delay(1);
+                c = sim_board_SS.read();
+                // Serial.print("\navail:");
+                // Serial.print(sim_board_SS.available());
+                // Serial.print(" ");
+                // Serial.print(c);
+
+                data[i] = c;
+
+                ++i;
             }
-            Serial.print("available:");
-            Serial.println(sim_board_SS.available());
-            c = sim_board_SS.read();
-            // Serial.print(i);
-            // Serial.print(" =");
-            // Serial.write(c);
-            // Serial.println("|");
+            // Serial.println(F("---------------"));
+            // Serial.println(i);
 
-            data[i] = char(c);
-
-OK
-
-+CHTTPSRECV: DATA,10
-ontent-Len
-+CHTTPSRECV: 0
-
-+CHTTPS: RECV EVENT
-
-
-            ++i;
+            if ( !wait_response("+CHTTPSRECV: 0") ){
+                Serial.println(F("Failed to wait +chttpsrecv: 0"));
+                return false; //critical failure
+            }
+            if ( i < response_size ){
+                if ( !wait_response("+CHTTPS: RECV EVENT") ){
+                    Serial.println(F("Failed to wait +chttps: recv event"));
+                    return false; //critical failure
+                }
+            }
         }
-        Serial.println("---------------");
-        Serial.println(i);
-        data[i]='\0';
+        else{
+            Serial.println(F("NOT OK.."));
+            return false;
+        }
+
     }
+    data[i]='\0';
+    return true;
+
 }
 
 int get_resp_cont_start_index(char *response, int resp_len){
