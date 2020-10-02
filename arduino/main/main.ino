@@ -52,13 +52,10 @@ void loop() { // run over and over
             Serial.println(lon,6);
         }
         else if (b == '@'){
-            // send_get_request("78.60.181.9", 51000, 1, "/api");
-            char ttt[] = "GET /api HTTP/1.1";
-            send_http_request("78.60.181.9", 51000, 1, ttt, strlen(ttt));
-            Serial.println("back in main");
+            send_get_request(PSTR("78.60.181.9"), 51000, 1, PSTR("/api"));
         }
         else if (b == '#'){
-            send_post_request("78.60.181.9", 51000, 1, "/api", "{ \"lat\":\"X\", \"lon\":\"Y\"}");
+            send_post_request(PSTR("78.60.181.9"), 51000, 1, PSTR("/api"), PSTR("{ \"lat\":\"X\", \"lon\":\"Y\"}"));
         }
         else{
             sim_board_SS.write(b);

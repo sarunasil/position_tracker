@@ -139,6 +139,8 @@ int freeRam()
 }
 
 int send_http_request(const char *hostname, unsigned int port, int http, const char *request, int requestLen){
+    Serial.print("req len: ");
+    Serial.println(requestLen);
 
     if (!start_net()){
         Serial.println(F("net fail"));
@@ -180,11 +182,11 @@ int send_http_request(const char *hostname, unsigned int port, int http, const c
     int start = get_resp_cont_start_index(data, recv_buff_len);
     // Serial.print("start=");
     // Serial.println(start);
-    if ( start < 0 ){
-        Serial.println(F("Could not find content separator"));
+    // if ( start < 0 ){
+    //     Serial.println(F("Could not find content separator"));
         start = 0;
         // return;
-    }
+    // }
     for (int i=start;i<recv_buff_len;++i){
         // Serial.print(i);
         // Serial.print(" -> ");
@@ -200,25 +202,21 @@ int send_http_request(const char *hostname, unsigned int port, int http, const c
 
 void send_get_request(const char *hostname, unsigned int port, int http, const char *url){
 
-    char temp[50];
-    sprintf(temp, "GET %s HTTP/1.1", url);
+    char request[50];
+    sprintf_P(request, PSTR("GET %s HTTP/1.1"), url);
 
-    int a = send_http_request(hostname, port, http, temp, strlen(temp));
+    int a = send_http_request(hostname, port, http, request, strlen(request));
     Serial.println("done with send_get_request");
 }
 
 void send_post_request(const char *hostname, unsigned int port, int http, const char *url, const char *data){
 
-    // const static char req_headers[] = "POST %s HTTP/1.1\r\nHost: %s:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s";
-    // char temp[250];
-    // sprintf(temp, req_headers, url, hostname, port, strlen(data), data);
-
-    char temp[250];
-    sprintf(temp, 
-"POST %s HTTP/1.1\r\nHost: %s:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s"
+    char request[250];
+    sprintf_P(request, PSTR(
+"POST %s HTTP/1.1\r\nHost: %s:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s")
 , url, hostname, port, strlen(data), data);
 
-    send_http_request(hostname, port, http, temp, strlen(temp));
+    send_http_request(hostname, port, http, request, strlen(request));
 }
 
 /*
