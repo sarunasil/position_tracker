@@ -25,7 +25,7 @@ void setup() {
         while (1);                  //otherwise weird AT chars pop up at the start
     }
 
-    Serial.println("Setup done!");
+    Serial.println(F("Setup done!"));
 }
 
 
@@ -47,17 +47,18 @@ void loop() { // run over and over
             float lat, lon;
             get_gps(&lat, &lon);
             Serial.print("GPS:");
-            Serial.print(lat);
+            Serial.print(lat,6);
             Serial.print(" ");
-            Serial.println(lon);
+            Serial.println(lon,6);
         }
         else if (b == '@'){
-            send_http("78.60.181.9", 11, 51000, 1, "GET /api HTTP/1.1", 17);
+            // send_get_request("78.60.181.9", 51000, 1, "/api");
+            char ttt[] = "GET /api HTTP/1.1";
+            send_http_request("78.60.181.9", 51000, 1, ttt, strlen(ttt));
+            Serial.println("back in main");
         }
         else if (b == '#'){
-            send_http("78.60.181.9", 11, 51000, 1, 
-"POST /api HTTP/1.1\r\nHost: 78.60.181.9:51000\r\nContent-Type: application/json\r\nContent-Length: 23\r\n\r\n{ \"lat\":\"X\", \"lon\":\"Y\"}"
-            , 122);
+            send_post_request("78.60.181.9", 51000, 1, "/api", "{ \"lat\":\"X\", \"lon\":\"Y\"}");
         }
         else{
             sim_board_SS.write(b);
