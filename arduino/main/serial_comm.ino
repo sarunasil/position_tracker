@@ -131,15 +131,17 @@ bool wait_value_response(const char* expectedHeader, char *returnValue){
             return false;
         }
 
+        // Serial.println(i);
         i++;
     }
 
+    returnValue[i] = '\0';
     // Serial.print("Wait value is:");
     // Serial.println(returnValue);
     return true;
 }
 
-bool read_response(char *data, int response_size){
+bool read_http_response(char *data, int response_size){
     const static byte read_len = 64;
 
     int i = 0;

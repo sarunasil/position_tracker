@@ -57,6 +57,16 @@ void loop() { // run over and over
         else if (b == '#'){
             send_post_request(PSTR("78.60.181.9"), 51000, 1, PSTR("/api"), PSTR("{ \"lat\":\"X\", \"lon\":\"Y\"}"));
         }
+        else if (b == '$'){
+            char time_string[30] = "";
+            if (get_time(time_string)){
+                Serial.println(time_string);
+            }
+            else{
+                Serial.println("Could not get time...");
+            }
+
+        }
         else{
             sim_board_SS.write(b);
         }

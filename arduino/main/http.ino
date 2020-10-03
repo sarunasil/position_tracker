@@ -174,7 +174,7 @@ int send_http_request(const char *hostname, unsigned int port, int http, const c
 
     char data[ recv_buff_len ]; // Just be careful and keep received resp len low
                     // as the whole thing is saved in memeory at once...
-    bool read_res = read_response(data, recv_buff_len-1); // -1 to leave space for '\0'
+    bool read_res = read_http_response(data, recv_buff_len-1); // -1 to leave space for '\0'
     if ( !read_res ){
         Serial.println(F("READING INTERRUPTED BY UNEXPECTED ERROR")); //try again?
     }
