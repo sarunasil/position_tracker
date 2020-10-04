@@ -1,5 +1,7 @@
 import json
 
+from datetime import datetime
+
 from flask import Blueprint, render_template, url_for, redirect, request, jsonify
 from flask_login import login_required, current_user
 
@@ -28,6 +30,8 @@ def api_get():
 
         try:
             with open('post_file.txt', 'a') as dfile:
+                dfile.write(datetime.now())
+                dfile.write(" -> ")
                 dfile.write(data)
                 dfile.write('\n')
             data = "OK. 0"
@@ -52,6 +56,8 @@ def api_post():
         if data:
             data = json.dumps(data)
             with open('post_file.txt', 'a') as dfile:
+                dfile.write(str(datetime.now()))
+                dfile.write(" -> ")
                 dfile.write(data)
                 dfile.write('\n')
             data = "OK. 0"
