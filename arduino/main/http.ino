@@ -29,6 +29,7 @@ bool start_net(){
             Serial.println(F("STOPPED chttps start"));
             return false;
         }
+        return true;
     }
     else if (state == '4'){ //net opened
         return true;
@@ -37,7 +38,7 @@ bool start_net(){
         return false;
     }
 
-    return true;
+    // return true;
 }
 
 bool start_session(const char *hostname, unsigned int port, int http){
@@ -182,11 +183,11 @@ int send_http_request(const char *hostname, unsigned int port, int http, const c
     int start = get_resp_cont_start_index(data, recv_buff_len);
     // Serial.print("start=");
     // Serial.println(start);
-    // if ( start < 0 ){
-    //     Serial.println(F("Could not find content separator"));
+    if ( start < 0 ){
+        Serial.println(F("Could not find content separator"));
         start = 0;
-        // return;
-    // }
+        return;
+    }
     for (int i=start;i<recv_buff_len;++i){
         // Serial.print(i);
         // Serial.print(" -> ");

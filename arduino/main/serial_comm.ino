@@ -135,7 +135,7 @@ bool wait_value_response(const char* expectedHeader, char *returnValue){
         i++;
     }
 
-    returnValue[i] = '\0';
+    returnValue[i - expectedHeaderLen] = '\0';
     // Serial.print("Wait value is:");
     // Serial.println(returnValue);
     return true;
