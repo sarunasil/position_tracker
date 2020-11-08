@@ -17,5 +17,5 @@ pip install -r requirements.txt
 echo "---"
 
 echo "Running waitress via nohup in background"
-nohup waitress-serve --port=51000 server:app
+nohup waitress-serve --port=51000 server:app &
 echo "---"
